@@ -1,0 +1,17 @@
+{% extends 'inventory/base.html' %}
+
+{% block content %}
+	<div>
+		<a href="{% url 'dashboard' %}" class="btn btn-outline-primary my-3 mx-4">Volver</a>
+		<div class="row">
+			<form method="POST" class="col-sm-11 col-md-4 mx-auto mt-5">
+				{% csrf_token %}
+				<h1 class="fw-light"> Estas seguro que deseas eliminar el artículo {{ item.name }}?</h1>
+                <p class="fw-light">Esta acción no se puede deshacer.</p>
+				<div>
+					<button class="btn btn-danger">Eliminar artículo</button>
+				</div>
+			</form>
+		</div>
+	</div>
+{% endblock content %}

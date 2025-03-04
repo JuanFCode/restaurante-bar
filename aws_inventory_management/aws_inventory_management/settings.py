@@ -132,3 +132,12 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 LOGIN_REDIRECT_URL = '/dashboard'
+LOGIN_URL = '/login'
+
+
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_AGE = 86400  # Expira la sesión en 1 segundo
+SESSION_SAVE_EVERY_REQUEST = True  # Guarda la sesión en cada solicitud
+
+
+LOW_QUANTITY = 3

@@ -1,0 +1,152 @@
+{% extends 'inventory/base.html' %}
+
+{% block content %}
+
+<!-- Alertas de stock bajo -->
+{% if messages %}
+    <div class="row mt-3">
+        {% for message in messages %}
+            {% if message.tags == 'error' %}
+                <div class="col-md-10 col-12 mx-auto alert alert-danger">
+                    {{ message }}
+                </div>
+            {% else %}
+                <div class="col-md-10 col-12 mx-auto alert alert-success">
+                    {{ message }}
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+{% endif %}
+
+<div class="row">
+    <div class="col-md-10 col-12 mx-auto mt-5">
+        <div class="d-flex justify-content-end">
+            {% if perms.inventory.manage_inventory %}
+                <a href="{% url 'add-item' %}" class="btn btn-primary">Añadir artículo +</a>
+            {% endif %}
+        </div>
+
+        <table class="table table-hover table-striped mt-3">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Cantidad</th>
+                    <th>Precio</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="inventory-table">
+                {% for item in items %}
+                <tr data-id="{{ item.id }}">
+                    <th>{{ item.id }}</th>
+                    <td>{{ item.name }}</td>
+                    {% if item.id in low_inventory_ids %}
+                        <td class="text-danger stock" id="stock-{{ item.id }}">{{ item.quantity }} (¡Stock Bajo!)</td>
+                    {% else %}
+                        <td class="stock" id="stock-{{ item.id }}">{{ item.quantity }}</td>
+                    {% endif %}
+                    <td>$ {{ item.price }}</td>
+                    <td>
+                        <button class="btn btn-success btn-sm add-to-cart" data-id="{{ item.id }}">+ Agregar</button>
+
+                        {% if perms.inventory.manage_inventory %}
+                            <a href="{% url 'edit-item' item.id %}" class="btn btn-warning btn-sm">✏ Editar</a>
+                            <a href="{% url 'delete-item' item.id %}" class="btn btn-danger btn-sm">🗑 Eliminar</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    var userCanManageInventory = "{{ perms.inventory.manage_inventory|yesno:'true,false' }}" === "true";
+</script>
+
+
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const csrftoken = getCookie('csrftoken');
+    
+        function updateInventory() {
+    fetch("/api/inventory/")
+    .then(response => response.json())
+    .then(data => {
+        const inventoryTable = document.getElementById("inventory-table");
+        inventoryTable.innerHTML = ""; // Limpiar tabla antes de actualizar
+
+        data.inventory.forEach(item => {
+            let stockClass = item.quantity <= 3 ? "text-danger" : ""; // Marcar stock bajo
+
+            let row = `
+                <tr data-id="${item.id}">
+                    <th>${item.id}</th>
+                    <td>${item.name}</td>
+                    <td class="${stockClass} stock" id="stock-${item.id}">${item.quantity}${item.quantity <= 3 ? " (¡Stock Bajo!)" : ""}</td>
+                    <td>$${item.price}</td>
+                    <td>
+                        <button class="btn btn-success btn-sm add-to-cart" data-id="${item.id}">+ Agregar</button>
+            `;
+
+            // ✅ Solo mostrar botones de Editar y Eliminar si el usuario tiene permisos
+            if (userCanManageInventory) {
+                row += `
+                        <a href="/edit-item/${item.id}/" class="btn btn-warning btn-sm">✏ Editar</a>
+                        <a href="/delete-item/${item.id}/" class="btn btn-danger btn-sm">🗑 Eliminar</a>
+                `;
+            }
+
+            row += `
+                    </td>
+                </tr>
+            `;
+
+            inventoryTable.innerHTML += row;
+        });
+
+        attachAddToCartListeners(); // ✅ Volver a agregar eventos de clic a los botones
+    });
+}
+
+        
+    
+        function attachAddToCartListeners() {
+            document.querySelectorAll(".add-to-cart").forEach(button => {
+                button.addEventListener("click", function() {
+                    const itemId = this.getAttribute("data-id");
+    
+                    fetch(`/cart/add/${itemId}/`, {
+                        method: "POST",
+                        headers: { 
+                            "X-CSRFToken": csrftoken,
+                            "X-Requested-With": "XMLHttpRequest"
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.cart_count) {
+                            document.getElementById("cart-count").innerText = data.cart_count;
+                            updateInventory(); // ✅ Actualizar inventario después de agregar
+                        } else if (data.error) {
+                            alert(data.error);
+                        }
+                    });
+                });
+            });
+        }
+    
+        // ✅ Ejecutar al cargar la página
+        attachAddToCartListeners(); 
+        setInterval(updateInventory, 5000); // ✅ Actualizar inventario cada 5 segundos
+    });
+    </script>
+    
+
+{% endblock content %}
+
+

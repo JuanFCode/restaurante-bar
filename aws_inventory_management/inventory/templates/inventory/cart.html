@@ -1,0 +1,40 @@
+{% extends 'inventory/base.html' %}
+
+{% block content %}
+<h1>Carrito de Compras</h1>
+
+{% if cart_items %}
+<table class="table">
+    <thead>
+        <tr>
+            <th>Producto</th>
+            <th>Cantidad</th>
+            <th>Subtotal</th>
+            <th>Acción</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in cart_items %}
+        <tr>
+            <td>{{ item.item.name }}</td>
+            <td>
+                <button class="btn btn-sm btn-secondary update-cart" data-id="{{ item.id }}" data-action="remove">-</button>
+                <span id="item-qty-{{ item.id }}">{{ item.quantity }}</span>
+                <button class="btn btn-sm btn-primary update-cart" data-id="{{ item.id }}" data-action="add">+</button>
+            </td>
+            <td>${{ item.subtotal }}</td>
+            <td>
+                <button class="btn btn-sm btn-danger update-cart" data-id="{{ item.id }}" data-action="delete">🗑</button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<p>Total: <strong>${{ total }}</strong></p>
+<a href="{% url 'checkout' %}" class="btn btn-primary">Finalizar Compra</a>
+
+{% else %}
+<p>Tu carrito está vacío.</p>
+{% endif %}
+{% endblock %}

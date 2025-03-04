@@ -4,11 +4,11 @@
 {% block content %}
 <div class="row">
     <div class="col-11 col-md-4 mx-auto mt-5">
-        <h1>Login</h1>
+        <h1>Iniciar Sesión</h1>
         <form method="post">
             {% csrf_token %}
             {{ form|crispy }}
-            <button class="btn btn-outline-secondary" type="submit">Login</button>
+            <button class="btn btn-outline-secondary" type="submit">Iniciar Sesión</button>
         </form>
         <div class="pt-3">
             <small class="text-muted">Necesitas una cuenta? <a href="{% url 'signup' %}" class="ml-2">Regístrate</a></small>

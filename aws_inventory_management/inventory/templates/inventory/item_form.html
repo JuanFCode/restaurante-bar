@@ -1,0 +1,33 @@
+{% extends 'inventory/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<a href="{% url 'dashboard' %}" class="btn btn-outline-primary my-3 mx-4">Volver</a>
+
+<div class="row">
+    <div class="col-11 col-md-4 mx-auto">
+        <h1>Agregar Artículo</h1>
+
+        <form method="post">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <div class="mt-3">
+                <button class="btn btn-primary">Guardar</button>
+            </div>
+        </form>
+        {% if form.errors %}
+    <div class="alert alert-danger">
+        <ul>
+            {% for field in form %}
+                {% for error in field.errors %}
+                    <li>{{ field.label }}: {{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
+    </div>
+</div>
+
+{% endblock content %}
