@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,7 +25,9 @@ SECRET_KEY = 'django-insecure-^76x%pgxoc8q3f%@vn5+#p@v3ct5ll9g5i#ju@^^b(me@h-u9n
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+
+ALLOWED_HOSTS = ["*"]  # ⚠️ Solo usar para pruebas, NO en producción
+
 
 
 # Application definition
@@ -79,10 +81,15 @@ WSGI_APPLICATION = 'aws_inventory_management.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'restaurante_db',
+        'USER': 'juan',
+        'PASSWORD': '12345',  # Reemplaza con la contraseña real de juan
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
+
 
 
 # Password validation
@@ -118,8 +125,25 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-STATIC_URL = 'static/'
+
+# 🔹 Directorio donde se recopilan archivos estáticos en desarrollo
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+STATIC_URL = '/static/'
+
+# 🔹 Corregido: Apuntar a la carpeta 'static/' en la raíz del proyecto
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
+
+# 🔹 Directorio donde Django almacena archivos estáticos en producción
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -136,7 +160,7 @@ LOGIN_URL = '/login'
 
 
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_COOKIE_AGE = 86400  # Expira la sesión en 1 segundo
+SESSION_COOKIE_AGE = 7200  # Expira la sesión 
 SESSION_SAVE_EVERY_REQUEST = True  # Guarda la sesión en cada solicitud
 
 

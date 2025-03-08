@@ -1,16 +1,24 @@
 {% extends 'inventory/base.html' %}
+{% load static %}
 
 {% block content %}
-<div>
-	<div class="row">
-		<div class="col-sm-11 col-md-4 mx-auto mt-5 px-3">
-			<h1 class="fw-light">Maneja tu Inventario</h1>
-			<p class="fw-light">Mantén un registro de tu inventario y recibe alertas de cantidad baja</p>
+<div class="container text-center mt-5">
+    <!-- 🔹 Encabezado atractivo -->
+    <h1 class="fw-bold">🍽️ ¡Bienvenido a Nápoles Bar! 🍷</h1>
+    <p class="lead text-muted">Escanea el código QR para ver nuestro menú digital.</p>
 
-			<div>
-				<a href="{% url 'dashboard'%}" class="btn btn-primary">Empieza Ahora!</a>
-			</div>
-		</div>
-	</div>
+    <!-- 🔹 Tarjeta con el código QR -->
+    <div class="card shadow-lg p-4 mt-4 mx-auto" style="max-width: 400px;">
+        <img src="{% static 'qr_menu.png' %}" alt="Código QR del Menú" class="img-fluid rounded mx-auto d-block" style="width: 200px;">
+        <p class="mt-3">📲 Abre el menú escaneando con tu celular</p>
+        <a href="{% static 'menu.pdf' %}" class="btn btn-primary mt-2" target="_blank">
+            📜 Ver Menú
+        </a>
+    </div>
+
+    <!-- 🔹 Mensaje adicional -->
+    <div class="mt-5">
+        <p class="text-muted">Si tienes problemas para ver el menú, haz clic en el botón o pregunta a nuestro personal. ¡Disfruta tu experiencia! 🍕</p>
+    </div>
 </div>
-{% endblock content %}
+{% endblock %}

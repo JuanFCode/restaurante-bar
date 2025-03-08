@@ -1,3 +1,4 @@
+import os
 from django.contrib import admin
 from django.urls import path
 from .views import (
@@ -6,6 +7,10 @@ from .views import (
     view_cart, checkout
 )
 from django.contrib.auth import views as auth_views
+from django.conf import settings
+from django.conf.urls.static import static
+
+
 
 urlpatterns = [
     path('', Index.as_view(), name='index'),
@@ -43,3 +48,8 @@ urlpatterns = [
 
 
 ]
+
+# 🔹 Servir archivos estáticos en modo desarrollo
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=os.path.join(os.path.dirname(settings.BASE_DIR), 'static'))
+
