@@ -31,10 +31,38 @@
     </tbody>
 </table>
 
-<p>Total: <strong>${{ total }}</strong></p>
-<a href="{% url 'checkout' %}" class="btn btn-primary">Finalizar Compra</a>
+<p><strong>Total a pagar: ${{ total }}</strong></p>
+
+{% if user.is_authenticated %}
+<form id="checkout-form" method="post" action="{% url 'checkout' %}" onsubmit="return validateCheckout()">
+    {% csrf_token %}
+    <label for="payment_method">Selecciona forma de pago:</label>
+    <select id="payment_method" name="payment_method" class="form-control" required>
+        <option value="">-- Selecciona un método --</option>
+        <option value="Efectivo">Efectivo</option>
+        <option value="Tarjeta">Tarjeta</option>
+        <option value="Transferencia">Transferencia</option>
+    </select>
+    <br>
+    <button type="submit" class="btn btn-primary">Finalizar Compra</button>
+</form>
+
+<script>
+    function validateCheckout() {
+        let paymentMethod = document.getElementById("payment_method").value;
+        if (!paymentMethod) {
+            alert("Por favor, selecciona una forma de pago antes de finalizar la compra.");
+            return false;
+        }
+        return confirm("¿Estás seguro de que deseas finalizar la compra?");
+    }
+</script>
+{% else %}
+<p class="alert alert-danger">Debes <a href="{% url 'login' %}">iniciar sesión</a> para finalizar la compra.</p>
+{% endif %}
+
 
 {% else %}
-<p>Tu carrito está vacío.</p>
+<p class="alert alert-warning">Tu carrito está vacío.</p>
 {% endif %}
 {% endblock %}

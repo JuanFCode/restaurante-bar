@@ -6,147 +6,134 @@
 {% if messages %}
     <div class="row mt-3">
         {% for message in messages %}
-            {% if message.tags == 'error' %}
-                <div class="col-md-10 col-12 mx-auto alert alert-danger">
-                    {{ message }}
-                </div>
-            {% else %}
-                <div class="col-md-10 col-12 mx-auto alert alert-success">
-                    {{ message }}
-                </div>
-            {% endif %}
+            <div class="col-md-10 col-12 mx-auto alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
         {% endfor %}
     </div>
 {% endif %}
 
-<div class="row">
-    <div class="col-md-10 col-12 mx-auto mt-5">
-        <div class="d-flex justify-content-end">
-            {% if perms.inventory.manage_inventory %}
-                <a href="{% url 'add-item' %}" class="btn btn-primary">Añadir artículo +</a>
-            {% endif %}
-        </div>
+<div class="container mt-4">
+    <h1 class="text-center mb-4">📜 Menú del Restaurante</h1>
 
-        <table class="table table-hover table-striped mt-3">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Nombre</th>
-                    <th>Cantidad</th>
-                    <th>Precio</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody id="inventory-table">
-                {% for item in items %}
-                <tr data-id="{{ item.id }}">
-                    <th>{{ item.id }}</th>
-                    <td>{{ item.name }}</td>
-                    {% if item.id in low_inventory_ids %}
-                        <td class="text-danger stock" id="stock-{{ item.id }}">{{ item.quantity }} (¡Stock Bajo!)</td>
-                    {% else %}
-                        <td class="stock" id="stock-{{ item.id }}">{{ item.quantity }}</td>
-                    {% endif %}
-                    <td>$ {{ item.price }}</td>
-                    <td>
-                        <button class="btn btn-success btn-sm add-to-cart" data-id="{{ item.id }}">+ Agregar</button>
+    <div class="d-flex justify-content-end mb-3">
+        {% if perms.inventory.manage_inventory %}
+            <a href="{% url 'add-item' %}" class="btn btn-primary shadow-sm">➕ Añadir artículo</a>
+        {% endif %}
+    </div>
 
-                        {% if perms.inventory.manage_inventory %}
-                            <a href="{% url 'edit-item' item.id %}" class="btn btn-warning btn-sm">✏ Editar</a>
-                            <a href="{% url 'delete-item' item.id %}" class="btn btn-danger btn-sm">🗑 Eliminar</a>
+    <!-- Menú agrupado por categorías con mejor diseño -->
+    <div class="accordion" id="menuAccordion">
+        {% for category in categories %}
+        <div class="accordion-item border-0 rounded shadow-sm mb-3">
+            <h2 class="accordion-header" id="heading{{ category.id }}">
+                <button class="accordion-button fw-bold text-white bg-gradient bg-dark collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ category.id }}" aria-expanded="false" aria-controls="collapse{{ category.id }}">
+                    🍽️ {{ category.name }}
+                </button>
+            </h2>
+            <div id="collapse{{ category.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ category.id }}" data-bs-parent="#menuAccordion">
+                <div class="accordion-body bg-light rounded">
+                    <div class="row">
+                        {% for item in items %}
+                        {% if item.category.id == category.id %}
+                        <div class="col-md-4 menu-item">
+                            <div class="card menu-card border-0 shadow-lg p-3 mb-4 bg-white rounded">
+                                <div class="card-img-top text-center">
+                                    <img src="/static/images/default-food.jpg" class="img-fluid rounded" alt="{{ item.name }}" style="max-height: 150px; object-fit: cover;">
+                                </div>
+                                <div class="card-body text-center">
+                                    <h5 class="card-title text-primary fw-bold">{{ item.name }}</h5>
+                                    <p class="text-success fw-semibold">💲 Precio: ${{ item.price }}</p>
+                                    <p class="text-info fw-semibold">📦 Cantidad: <span id="quantity-{{ item.id }}">{{ item.quantity }}</span></p>
+                                    {% if item.id in low_inventory_ids %}
+                                        <p class="text-danger fw-bold">⚠️ ¡Stock Bajo!</p>
+                                    {% endif %}
+                                    <button class="btn btn-success add-to-cart mt-2 fw-bold shadow-sm" data-id="{{ item.id }}">🛒 Agregar</button>
+                                    {% if perms.inventory.manage_inventory %}
+                                        <div class="mt-2 d-flex justify-content-center gap-2">
+                                            <a href="{% url 'edit-item' item.id %}" class="btn btn-warning btn-sm shadow-sm">✏ Editar</a>
+                                            <a href="{% url 'delete-item' item.id %}" class="btn btn-danger btn-sm shadow-sm">🗑 Eliminar</a>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
                         {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
     </div>
 </div>
 
+<style>
+    .accordion-button {
+        transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+        border-radius: 10px;
+    }
+    .accordion-button:hover {
+        background-color: #23272b !important;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    .menu-card {
+        transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+        border-radius: 10px;
+    }
+    .menu-card:hover {
+        transform: scale(1.05);
+        box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+    }
+    .btn {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+    .btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    }
+</style>
+
 <script>
-    var userCanManageInventory = "{{ perms.inventory.manage_inventory|yesno:'true,false' }}" === "true";
-</script>
-
-
-
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const csrftoken = getCookie('csrftoken');
-    
+    document.addEventListener("DOMContentLoaded", function () {
         function updateInventory() {
-    fetch("/api/inventory/")
-    .then(response => response.json())
-    .then(data => {
-        const inventoryTable = document.getElementById("inventory-table");
-        inventoryTable.innerHTML = ""; // Limpiar tabla antes de actualizar
-
-        data.inventory.forEach(item => {
-            let stockClass = item.quantity <= 3 ? "text-danger" : ""; // Marcar stock bajo
-
-            let row = `
-                <tr data-id="${item.id}">
-                    <th>${item.id}</th>
-                    <td>${item.name}</td>
-                    <td class="${stockClass} stock" id="stock-${item.id}">${item.quantity}${item.quantity <= 3 ? " (¡Stock Bajo!)" : ""}</td>
-                    <td>$${item.price}</td>
-                    <td>
-                        <button class="btn btn-success btn-sm add-to-cart" data-id="${item.id}">+ Agregar</button>
-            `;
-
-            // ✅ Solo mostrar botones de Editar y Eliminar si el usuario tiene permisos
-            if (userCanManageInventory) {
-                row += `
-                        <a href="/edit-item/${item.id}/" class="btn btn-warning btn-sm">✏ Editar</a>
-                        <a href="/delete-item/${item.id}/" class="btn btn-danger btn-sm">🗑 Eliminar</a>
-                `;
-            }
-
-            row += `
-                    </td>
-                </tr>
-            `;
-
-            inventoryTable.innerHTML += row;
-        });
-
-        attachAddToCartListeners(); // ✅ Volver a agregar eventos de clic a los botones
-    });
-}
-
-        
-    
-        function attachAddToCartListeners() {
-            document.querySelectorAll(".add-to-cart").forEach(button => {
-                button.addEventListener("click", function() {
-                    const itemId = this.getAttribute("data-id");
-    
-                    fetch(`/cart/add/${itemId}/`, {
-                        method: "POST",
-                        headers: { 
-                            "X-CSRFToken": csrftoken,
-                            "X-Requested-With": "XMLHttpRequest"
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.cart_count) {
-                            document.getElementById("cart-count").innerText = data.cart_count;
-                            updateInventory(); // ✅ Actualizar inventario después de agregar
-                        } else if (data.error) {
-                            alert(data.error);
-                        }
-                    });
+            fetch("/api/inventory/")
+            .then(response => response.json())
+            .then(data => {
+                data.inventory.forEach(item => {
+                    let quantityElement = document.getElementById(`quantity-${item.id}`);
+                    if (quantityElement) {
+                        quantityElement.innerText = item.quantity;
+                    }
                 });
             });
         }
-    
-        // ✅ Ejecutar al cargar la página
-        attachAddToCartListeners(); 
-        setInterval(updateInventory, 5000); // ✅ Actualizar inventario cada 5 segundos
+
+        document.querySelectorAll(".add-to-cart").forEach(button => {
+            button.addEventListener("click", function() {
+                const itemId = this.getAttribute("data-id");
+                fetch(`/cart/add/${itemId}/`, {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": getCookie("csrftoken"),
+                        "X-Requested-With": "XMLHttpRequest"
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.cart_count) {
+                        document.getElementById("cart-count").innerText = data.cart_count;
+                    }
+                    updateInventory(); // ✅ Actualizar inventario inmediatamente después de agregar al carrito
+                    if (data.error) {
+                        alert(data.error);
+                    }
+                });
+            });
+        });
+
+        setInterval(updateInventory, 5000); // ✅ Se actualiza cada 2 segundos para reflejar cambios rápidamente
     });
-    </script>
-    
+</script>
 
 {% endblock content %}
-
-

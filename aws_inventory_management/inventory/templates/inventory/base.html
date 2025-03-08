@@ -8,7 +8,43 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <link href="https://bootswatch.com/5/minty/bootstrap.min.css" rel="stylesheet">
-    <title>Restaurant Inventory</title>
+
+    <title>🍽️ NÁPOLES BAR</title>
+
+    <style>
+        .cart-float {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #343a40;
+            /* Gris oscuro */
+            color: white;
+            padding: 12px 18px;
+            border-radius: 50px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+
+        .cart-float:hover {
+            background: #23272b;
+            transform: scale(1.05);
+            box-shadow: 0px 6px 14px rgba(0, 0, 0, 0.3);
+        }
+
+        .cart-float span {
+            background: white;
+            color: #343a40;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+        }
+    </style>
 </head>
 
 <body>
@@ -18,58 +54,75 @@
         {% block content %}{% endblock content %}
     </div>
 
-    <!-- Carrito flotante -->
-    <div id="cart-float" data-bs-toggle="modal" data-bs-target="#cartModal">
+    <!-- Carrito flotante mejorado -->
+    <div id="cart-float" class="cart-float" data-bs-toggle="modal" data-bs-target="#cartModal">
         🛒 <span id="cart-count">0</span> productos
     </div>
 
-    <!-- Modal del Carrito -->
-    <div class="modal fade" id="cartModal" tabindex="-1" aria-labelledby="cartModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Carrito de Compras</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- Modal del Carrito Mejorado -->
+<div class="modal fade" id="cartModal" tabindex="-1" aria-labelledby="cartModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- 🔹 Encabezado oscuro con ícono grande -->
+            <div class="modal-header bg-dark text-white d-flex align-items-center">
+                <h5 class="modal-title">
+                    🛍️ <strong>Tu Carrito</strong>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- 🔹 Cuerpo del modal -->
+            <div class="modal-body">
+                <table class="table table-hover text-center align-middle">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th>Producto</th>
+                            <th>Cantidad</th>
+                            <th>Subtotal</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cart-items">
+                        <tr>
+                            <td colspan="4" class="text-muted">🛒 Tu carrito está vacío.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- 🔹 Total resaltado en una tarjeta moderna -->
+                <div class="card bg-light shadow-sm mt-3 p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="m-0">Total:</h4>
+                        <h3 class="text-success fw-bold">$<span id="cart-total">0.00</span></h3>
+                    </div>
                 </div>
-                <div class="modal-body">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Producto</th>
-                                <th>Cantidad</th>
-                                <th>Subtotal</th>
-                                <th>Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody id="cart-items"></tbody>
-                    </table>
-                    <p><strong>Total: $<span id="cart-total">0.00</span></strong></p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Seguir Comprando</button>
-                    <a href="{% url 'checkout' %}" class="btn btn-primary">Finalizar Compra</a>
-                </div>
+            </div>
+
+            <!-- 🔹 Pie del modal con botones mejor organizados -->
+            <div class="modal-footer d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-dark btn-lg" data-bs-dismiss="modal">
+                    🔄 Seguir Comprando
+                </button>
+                <a href="{% url 'checkout' %}" class="btn btn-success btn-lg px-4">
+                    ✅ Finalizar Compra
+                </a>
             </div>
         </div>
     </div>
+</div>
+
+
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             loadCartItems(); // ✅ Cargar el carrito al iniciar la página
         });
 
         function loadCartItems() {
-            console.log("Ejecutando loadCartItems...");
-
             fetch("/cart/", { headers: { "X-Requested-With": "XMLHttpRequest" } })
                 .then(response => response.json())
                 .then(data => {
-                    console.log("Datos del carrito recibidos:", data);
-
                     const cartItemsContainer = document.getElementById("cart-items");
-                    if (!cartItemsContainer) {
-                        console.error("Elemento #cart-items no encontrado.");
-                        return;
-                    }
+                    if (!cartItemsContainer) return;
 
                     cartItemsContainer.innerHTML = "";
 
@@ -89,19 +142,14 @@
                         cartItemsContainer.innerHTML += row;
                     });
 
-                    const cartTotal = document.getElementById("cart-total");
-                    if (cartTotal) {
-                        cartTotal.innerText = data.total;
-                    } else {
-                        console.error("No se encontró #cart-total");
-                    }
+                    document.getElementById("cart-total").innerText = data.total;
                 })
                 .catch(error => console.error("Error al cargar el carrito:", error));
         }
 
         // ✅ Recargar carrito al abrir el modal
         document.getElementById("cart-float").addEventListener("click", function () {
-            setTimeout(() => { loadCartItems(); }, 300);
+            setTimeout(loadCartItems, 300);
         });
 
         // ✅ Actualizar carrito después de agregar/eliminar productos
@@ -122,7 +170,7 @@
                         if (data.cart_count !== undefined) {
                             document.getElementById("cart-count").innerText = data.cart_count;
                         }
-                        loadCartItems(); // ✅ Refrescar carrito automáticamente después de cambios
+                        loadCartItems();
                     });
             }
         });
@@ -130,18 +178,15 @@
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
+                document.cookie.split(';').forEach(cookie => {
+                    cookie = cookie.trim();
                     if (cookie.startsWith(name + '=')) {
                         cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
                     }
-                }
+                });
             }
             return cookieValue;
         }
-
 
         function updateCartCount() {
             fetch("/cart/", { headers: { "X-Requested-With": "XMLHttpRequest" } })
@@ -154,15 +199,8 @@
                 .catch(error => console.error("Error al actualizar el contador del carrito:", error));
         }
 
-        // ✅ Llamar a esta función al cargar la página
-        document.addEventListener("DOMContentLoaded", function () {
-            updateCartCount();
-        });
-
-
+        document.addEventListener("DOMContentLoaded", updateCartCount);
     </script>
-
-
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

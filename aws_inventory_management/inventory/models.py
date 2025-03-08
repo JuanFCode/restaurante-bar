@@ -38,3 +38,34 @@ class CartItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity} x {self.item.name} - {self.user.username}"
+
+
+class Order(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    total = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(
+        max_length=20, 
+        choices=[("Pendiente", "Pendiente"), ("Pagado", "Pagado"), ("Impreso", "Impreso")], 
+        default="Pendiente"
+    )
+    payment_method = models.CharField(
+        max_length=50,
+        choices=[("Efectivo", "Efectivo"), ("Tarjeta", "Tarjeta"), ("Transferencia", "Transferencia")],
+        default="Efectivo"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # ✅ Relación ManyToMany con InventoryItem usando OrderItem
+    items = models.ManyToManyField(InventoryItem, through="OrderItem")  
+
+    def __str__(self):
+        return f"Orden #{self.id} - {self.user.username} - {self.status} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    item = models.ForeignKey(InventoryItem, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
+
+    def __str__(self):
+        return f"{self.quantity} x {self.item.name} (Orden #{self.order.id})"
