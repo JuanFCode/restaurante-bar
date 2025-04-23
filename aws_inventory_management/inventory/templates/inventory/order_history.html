@@ -1,4 +1,5 @@
 {% extends 'inventory/base.html' %}
+{% load custom_filters %}
 
 {% block content %}
 <h1 class="mb-4">📜 Historial de Pedidos</h1>
@@ -20,31 +21,40 @@
     </div>
 </div>
 
+<!-- 🔹 Botón para enviar el reporte por correo -->
+<div class="d-flex justify-content-end mb-3">
+    <button class="btn btn-success" onclick="sendExcelReport()">📊 Enviar Reporte en Excel</button>
+</div>
+
 {% if orders %}
 <table class="table table-hover text-center align-middle" id="orders-table">
     <thead class="table-dark text-white">
         <tr>
             <th>ID</th>
+            <th>Mesa</th>
             <th>Usuario</th>
             <th>Total</th>
+            <th>Propina</th>  <!-- ✅ Nueva columna de Propina -->
             <th>Forma de Pago</th>
             <th>Estado</th>
             <th>Fecha</th>
+            <th>Detalles</th>
         </tr>
     </thead>
     <tbody>
         {% for order in orders %}
         <tr data-date="{{ order.created_at|date:'Y-m-d' }}">
             <td>#{{ order.id }}</td>
+            <td><strong>{{ order.table_number }}</strong></td>
             <td><strong>{{ order.user.username }}</strong></td>
             <td class="text-success fw-bold">${{ order.total }}</td>
-
-            <!-- 🔹 Mejor estilo para la forma de pago -->
+            
+            <!-- 🔹 Muestra la propina, si existe -->
+            <td class="text-success fw-bold">${{ order.tip|default:0 }}</td>  <!-- ✅ Muestra la propina -->
+            
             <td>
                 <span class="badge bg-info text-dark">{{ order.payment_method }}</span>
             </td>
-
-            <!-- 🔹 Estados con etiquetas visuales -->
             <td>
                 {% if order.status == "Pendiente" %}
                     <span class="badge bg-warning">🕓 Pendiente</span>
@@ -54,9 +64,47 @@
                     <span class="badge bg-primary">🖨️ Impreso</span>
                 {% endif %}
             </td>
-
             <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
+            <td>
+                <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#orderModal{{ order.id }}">
+                    📋 Ver Detalles
+                </button>
+            </td>
         </tr>
+
+        <!-- Modal con los detalles del pedido -->
+        <div class="modal fade" id="orderModal{{ order.id }}" tabindex="-1" aria-labelledby="orderModalLabel{{ order.id }}" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-dark text-white">
+                        <h5 class="modal-title">📦 Detalles del Pedido #{{ order.id }}</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p><strong>Mesa:</strong> {{ order.table_number }}</p>
+                        <p><strong>Usuario:</strong> {{ order.user.username }}</p>
+                        <p><strong>Total:</strong> ${{ order.total }}</p>
+                        <p><strong>Propina:</strong> ${{ order.tip|default:0 }}</p> <!-- ✅ Muestra la propina en el modal -->
+                        <p><strong>Forma de Pago:</strong> {{ order.payment_method }}</p>
+                        <p><strong>Estado:</strong> {{ order.status }}</p>
+                        <p><strong>Fecha:</strong> {{ order.created_at|date:"Y-m-d H:i" }}</p>
+
+                        <hr>
+                        <h5>🛒 Productos:</h5>
+                        <ul class="list-group">
+                            {% for item in order_details|get_item:order.id %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    {{ item.item.name }}
+                                    <span class="badge bg-primary">Cantidad: {{ item.quantity }}</span>
+                                    <span class="badge bg-success">Precio: ${{ item.item.price }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         {% endfor %}
     </tbody>
 </table>
@@ -80,6 +128,24 @@ function filterOrders() {
             row.style.display = "";
         }
     });
+}
+
+// 🔹 Función para enviar el reporte en Excel por correo
+function sendExcelReport() {
+    let today = new Date().toISOString().split("T")[0]; // Fecha actual YYYY-MM-DD
+    fetch(`/orders/send-excel-report/?date=${today}`, {
+        method: "GET",
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert("✅ Reporte de ventas enviado en Excel.");
+        } else {
+            alert("⚠️ Error al enviar el reporte.");
+        }
+    })
+    .catch(error => console.error("Error al enviar el reporte en Excel:", error));
 }
 </script>
 

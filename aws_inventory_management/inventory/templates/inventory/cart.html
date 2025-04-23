@@ -15,14 +15,14 @@
     </thead>
     <tbody>
         {% for item in cart_items %}
-        <tr>
+        <tr id="row-{{ item.id }}">
             <td>{{ item.item.name }}</td>
             <td>
                 <button class="btn btn-sm btn-secondary update-cart" data-id="{{ item.id }}" data-action="remove">-</button>
                 <span id="item-qty-{{ item.id }}">{{ item.quantity }}</span>
                 <button class="btn btn-sm btn-primary update-cart" data-id="{{ item.id }}" data-action="add">+</button>
             </td>
-            <td>${{ item.subtotal }}</td>
+            <td class="subtotal" id="subtotal-{{ item.id }}">${{ item.subtotal }}</td>
             <td>
                 <button class="btn btn-sm btn-danger update-cart" data-id="{{ item.id }}" data-action="delete">🗑</button>
             </td>
@@ -31,11 +31,14 @@
     </tbody>
 </table>
 
-<p><strong>Total a pagar: ${{ total }}</strong></p>
+<p><strong>Total a pagar: $<span id="cart-total">{{ total }}</span></strong></p>
 
 {% if user.is_authenticated %}
 <form id="checkout-form" method="post" action="{% url 'checkout' %}" onsubmit="return validateCheckout()">
     {% csrf_token %}
+    <label for="table_number">Número de Mesa:</label>
+    <input type="number" id="table_number" name="table_number" class="form-control" required min="1">
+    
     <label for="payment_method">Selecciona forma de pago:</label>
     <select id="payment_method" name="payment_method" class="form-control" required>
         <option value="">-- Selecciona un método --</option>
@@ -48,19 +51,87 @@
 </form>
 
 <script>
-    function validateCheckout() {
-        let paymentMethod = document.getElementById("payment_method").value;
-        if (!paymentMethod) {
-            alert("Por favor, selecciona una forma de pago antes de finalizar la compra.");
-            return false;
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".update-cart").forEach(button => {
+        button.addEventListener("click", function () {
+            let itemId = this.getAttribute("data-id");
+            let action = this.getAttribute("data-action");
+
+            fetch(`/cart/update/${itemId}/${action}/`, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": getCookie("csrftoken"),
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    updateCartUI(itemId, data.quantity, data.cart_count, data.total);
+                }
+            })
+            .catch(error => console.error("Error en la actualización del carrito:", error));
+        });
+    });
+});
+
+// ✅ Función para actualizar la UI del carrito en tiempo real
+function updateCartUI(itemId, newQuantity, cartCount, newTotal) {
+    let qtyElement = document.getElementById(`item-qty-${itemId}`);
+    let subtotalElement = document.getElementById(`subtotal-${itemId}`);
+
+    if (qtyElement) {
+        if (newQuantity > 0) {
+            qtyElement.innerText = newQuantity;
+            subtotalElement.innerText = `$${(newQuantity * parseFloat(subtotalElement.dataset.price)).toFixed(2)}`;
+        } else {
+            document.getElementById(`row-${itemId}`).remove(); // Eliminar la fila si la cantidad es 0
         }
-        return confirm("¿Estás seguro de que deseas finalizar la compra?");
     }
+
+    // Actualizar el total del carrito
+    document.getElementById("cart-total").innerText = newTotal.toFixed(2);
+
+    // Actualizar el contador de productos en el carrito flotante
+    document.getElementById("cart-count").innerText = cartCount;
+}
+
+// ✅ Obtener el token CSRF para Django
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        document.cookie.split(';').forEach(cookie => {
+            cookie = cookie.trim();
+            if (cookie.startsWith(name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            }
+        });
+    }
+    return cookieValue;
+}
+
+function validateCheckout() {
+    let tableNumber = document.getElementById("table_number").value;
+    let paymentMethod = document.getElementById("payment_method").value;
+
+    if (!tableNumber || tableNumber <= 0) {
+        alert("Por favor, ingresa un número de mesa válido.");
+        return false;
+    }
+    if (!paymentMethod) {
+        alert("Por favor, selecciona una forma de pago antes de finalizar la compra.");
+        return false;
+    }
+
+    return confirm("¿Estás seguro de que deseas finalizar la compra?");
+}
 </script>
+
 {% else %}
 <p class="alert alert-danger">Debes <a href="{% url 'login' %}">iniciar sesión</a> para finalizar la compra.</p>
 {% endif %}
-
 
 {% else %}
 <p class="alert alert-warning">Tu carrito está vacío.</p>

@@ -14,8 +14,12 @@ from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 import tempfile
 import cups
-# Create your views here.
-
+import pandas as pd
+from io import BytesIO
+from django.core.mail import EmailMessage
+from django.utils.timezone import now
+from datetime import datetime, timedelta, time
+from django.utils import timezone
 
 # Vista de inicio
 class Index(TemplateView):
@@ -41,7 +45,6 @@ class EmployeeRestrictedView(LoginRequiredMixin, View):
 
         return render(request, 'inventory/dashboard.html', {'items': items})
 
-	
 # Vista del Dashboard
 class Dashboard(LoginRequiredMixin, View):
     def get(self, request):
@@ -50,11 +53,16 @@ class Dashboard(LoginRequiredMixin, View):
         else:
             items = InventoryItem.objects.all()
 
-        categories = Category.objects.all()  # 🔹 Agregar consulta de categorías
+        categories = Category.objects.all()  # 🔹 Obtener todas las categorías
 
+        # 🔹 Filtrar productos con stock bajo
         low_inventory = items.filter(quantity__lte=LOW_QUANTITY)
+
+        # 🔹 Generar una lista con los nombres y cantidades de los productos con stock bajo
+        low_inventory_names = [f"{item.name} (Quedan {item.quantity})" for item in low_inventory]
+
         if low_inventory.exists():
-            messages.error(request, f"{low_inventory.count()} artículo(s) tienen baja cantidad")
+            messages.warning(request, f"⚠️ Artículos con stock bajo: {', '.join(low_inventory_names)}")
 
         low_inventory_ids = low_inventory.values_list("id", flat=True)
 
@@ -73,7 +81,6 @@ class Dashboard(LoginRequiredMixin, View):
                 "is_supervisor": is_supervisor
             }
         )
-
 
 
 # Vista de registro de usuarios
@@ -245,9 +252,13 @@ def update_cart(request, item_id, action):
             item.save()
             cart_item.delete()
 
+        total = sum([ci.subtotal() for ci in CartItem.objects.filter(user=request.user)])
+
         return JsonResponse({
             'quantity': cart_item.quantity if cart_item.quantity > 0 else 0,
-            'cart_count': CartItem.objects.filter(user=request.user).count()
+            'cart_count': CartItem.objects.filter(user=request.user).count(),
+            'total': float(total)  # ✅ Retornar el total actualizado
+
         })
 
     return JsonResponse({'error': 'No autorizado'}, status=403)
@@ -270,13 +281,25 @@ def checkout(request):
 
     total = sum(item.subtotal() for item in cart_items)
     payment_method = request.POST.get("payment_method")
+    table_number = request.POST.get("table_number")
 
     if not payment_method:
         messages.error(request, "Debes seleccionar una forma de pago.")
         return redirect("view-cart")
+    
+
+    if not table_number or int(table_number) <= 0:
+        messages.error(request, "Número de mesa inválido.")
+        return redirect("view-cart")
+
 
     # 🔹 CREAR LA ORDEN
-    order = Order.objects.create(user=request.user, total=total, payment_method=payment_method)
+    order = Order.objects.create(
+        user=request.user,
+        total=total, 
+        payment_method=payment_method,
+        table_number=int(table_number)  # ✅ Guardamos la mesa
+        )
 
     # 🔹 ASOCIAR LOS PRODUCTOS USANDO OrderItem
     for cart_item in cart_items:
@@ -286,9 +309,9 @@ def checkout(request):
 
     # 🔹 ELIMINAR EL CARRITO DESPUÉS DE GUARDAR LOS PRODUCTOS EN LA ORDEN
     cart_items.delete()
-
-    messages.success(request, "¡Compra finalizada con éxito! 🛒")
-    return redirect("dashboard")  # 📌 Redirige al menú de comidas
+    
+    messages.success(request, f"¡Pedido registrado en la Mesa {table_number}! 🛒")
+    return redirect("dashboard")
 
 
 
@@ -321,7 +344,14 @@ class PendingOrdersView(LoginRequiredMixin, View):
         action = request.POST.get("action")
 
         if action == "mark_paid":
+            try:
+                tip = float(request.POST.get("tip", 0))
+                order.tip = tip
+            except ValueError:
+                order.tip = 0.0  # Por si meten texto o algo no válido
+
             order.status = "Pagado"
+
         elif action == "mark_printed":
             order.status = "Impreso"
 
@@ -329,12 +359,18 @@ class PendingOrdersView(LoginRequiredMixin, View):
         return redirect("pending-orders")
 
 
-
 class OrderHistoryView(LoginRequiredMixin, View):
-    """ Muestra todas las órdenes registradas (histórico) """
+    """ Muestra todas las órdenes registradas (histórico) con detalles de productos """
     def get(self, request):
         orders = Order.objects.all().order_by("-created_at")  # 📌 Ordenados por fecha más reciente
-        return render(request, "inventory/order_history.html", {"orders": orders})
+        order_details = {}
+
+        for order in orders:
+            items = OrderItem.objects.filter(order=order)
+            order_details[order.id] = items  # Guardamos los productos en un diccionario
+
+        return render(request, "inventory/order_history.html", {"orders": orders, "order_details": order_details})
+
 
 
 def print_order(request, order_id):
@@ -355,16 +391,27 @@ def print_order(request, order_id):
     ESC = "\x1B"
     GS = "\x1D"
 
-    # Encabezado del ticket
+    # Logo en formato ASCII (puedes personalizarlo más)
+    logo = """
+    +------------------------+
+    |      NAPOLES BAR       |
+    |       RESTAURANTE      |
+    |------------------------|
+    """
+
+    # Encabezado del ticket con logo y datos del restaurante
     ticket_text = f"""
 {ESC}@  # Reset printer
+{logo}  # Logo en ASCII
 {ESC}\x21\x10     NAPOLES BAR {ESC}\x21\x00
 {ESC}\x45\x01NIT: 123456789{ESC}\x45\x00
 {ESC}\x21\x01Calle 123, Ciudad
 Tel: 555-5555
------------------------------
+{"="*30}  # Línea decorativa
+MESA: {order.table_number}  # ✅ Mostramos la mesa
+{"="*30}  # Línea decorativa
 CANT  DESCRIPCIÓN       PRECIO
------------------------------
+{"="*30}  # Línea decorativa
 """
 
     # 🔹 Imprimir correctamente los productos
@@ -375,11 +422,24 @@ CANT  DESCRIPCIÓN       PRECIO
 
         ticket_text += f"{cantidad}  {nombre_producto} {precio}\n"
 
-    # Totales y mensaje de cierre
+    # 🔹 Incluir la propina si es que fue agregada
+    if 'tip' in request.POST and request.POST['tip']:
+        tip = float(request.POST['tip'])
+        ticket_text += f"""
+{"="*30}  # Línea decorativa
+PROPINA:              ${tip:.2f}
+{"="*30}  # Línea decorativa
+"""
+    else:
+        tip = 0
+
+    # 🔹 Totales y mensaje de cierre con propina
+    total_con_tip = order.total + tip
     ticket_text += f"""
------------------------------
-TOTAL:                 ${order.total:.2f}
------------------------------
+{"="*30}  # Línea decorativa
+TOTAL:                ${order.total:.2f}
+TOTAL CON PROPINA:    ${total_con_tip:.2f}
+{"="*30}  # Línea decorativa
 {ESC}\x21\x01GRACIAS POR SU VISITA!
 {GS}\x56\x41  # Corte de papel
 """
@@ -399,6 +459,7 @@ TOTAL:                 ${order.total:.2f}
         return JsonResponse({"error": f"Error al imprimir: {str(e)}"}, status=500)
 
 
+
 def update_payment_method(request, order_id):
     """Actualiza la forma de pago de un pedido"""
     if request.method == "POST" and request.user.is_authenticated:
@@ -413,3 +474,80 @@ def update_payment_method(request, order_id):
         return JsonResponse({"error": "Forma de pago no válida"}, status=400)
 
     return JsonResponse({"error": "No autorizado"}, status=403)
+
+from django.utils.timezone import localtime
+from datetime import datetime, timedelta, time
+import pandas as pd
+from io import BytesIO
+from django.core.mail import EmailMessage
+from django.http import JsonResponse
+from .models import Order, OrderItem
+
+def send_excel_report(request=None):
+    """Genera un reporte de ventas en Excel (de 00:00 a 03:00 del día siguiente) y lo envía por correo."""
+
+    # Obtener el día anterior
+    today = timezone.now().date()
+    start_datetime = timezone.make_aware(datetime.combine(today - timedelta(days=1), time.min))
+    end_datetime = timezone.make_aware(datetime.combine(today, time(3, 0)))
+
+    # Obtener los pedidos en ese rango
+    orders = Order.objects.filter(created_at__range=(start_datetime, end_datetime))
+
+    if not orders.exists():
+        return JsonResponse({"error": "No hay ventas registradas en el rango de tiempo."}, status=400)
+
+    # Generar los datos para el Excel
+    data = []
+    for order in orders:
+        items = OrderItem.objects.filter(order=order)
+        
+        # Obtener la propina, si existe
+        tip = order.tip if hasattr(order, 'tip') else 0  # Asumimos que `tip` es un campo de `Order`
+
+        for item in items:
+            # Convertir la fecha de creación de la orden a la zona horaria local
+            local_created_at = localtime(order.created_at).strftime("%Y-%m-%d %H:%M")
+            
+            data.append([
+                order.id,
+                order.table_number,
+                order.user.username,
+                order.payment_method,
+                item.item.name,
+                item.quantity,
+                item.item.price,
+                item.quantity * item.item.price,
+                order.total,
+                tip,  # Agregar la propina
+                order.status,
+                local_created_at,  # Usar la fecha en la zona horaria local
+            ])
+
+    df = pd.DataFrame(data, columns=[
+        "ID Pedido", "Mesa", "Usuario", "Forma de Pago", "Producto",
+        "Cantidad", "Precio Unitario", "Subtotal", "Total Pedido",
+        "Propina", "Estado", "Fecha"
+    ])
+
+    # Guardar Excel en memoria
+    excel_buffer = BytesIO()
+    with pd.ExcelWriter(excel_buffer, engine="xlsxwriter") as writer:
+        df.to_excel(writer, sheet_name="Ventas", index=False)
+    excel_buffer.seek(0)
+
+    # Enviar correo
+    email = EmailMessage(
+        subject=f"📊 Reporte de Ventas - {start_datetime.strftime('%d/%m/%Y')} (hasta 3 AM)",
+        body="Adjunto encontrarás el reporte de ventas hasta las 3 AM del día siguiente.",
+        from_email="jimenezlozadajuanfelipe@gmail.com",
+        to=["pocox35g99@gmail.com"],
+    )
+    filename = f"Reporte_Ventas_{start_datetime.strftime('%Y-%m-%d')}.xlsx"
+    email.attach(filename, excel_buffer.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    email.send()
+
+    return JsonResponse({"success": True, "message": "Reporte de ventas enviado en Excel."})
+
+
+

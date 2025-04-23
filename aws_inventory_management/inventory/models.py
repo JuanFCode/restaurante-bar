@@ -43,6 +43,7 @@ class CartItem(models.Model):
 class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     total = models.DecimalField(max_digits=10, decimal_places=2)
+    tip = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # 👈 Agregado aquí
     status = models.CharField(
         max_length=20, 
         choices=[("Pendiente", "Pendiente"), ("Pagado", "Pagado"), ("Impreso", "Impreso")], 
@@ -53,13 +54,13 @@ class Order(models.Model):
         choices=[("Efectivo", "Efectivo"), ("Tarjeta", "Tarjeta"), ("Transferencia", "Transferencia")],
         default="Efectivo"
     )
+    table_number = models.PositiveIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-
-    # ✅ Relación ManyToMany con InventoryItem usando OrderItem
     items = models.ManyToManyField(InventoryItem, through="OrderItem")  
 
     def __str__(self):
         return f"Orden #{self.id} - {self.user.username} - {self.status} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+
 
 
 class OrderItem(models.Model):

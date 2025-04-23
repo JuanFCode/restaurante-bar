@@ -25,10 +25,18 @@ SECRET_KEY = 'django-insecure-^76x%pgxoc8q3f%@vn5+#p@v3ct5ll9g5i#ju@^^b(me@h-u9n
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+CSRF_COOKIE_SECURE = False  # Prueba deshabilitar esto en desarrollo
 
-ALLOWED_HOSTS = ["*"]  # ⚠️ Solo usar para pruebas, NO en producción
 
+ALLOWED_HOSTS = [
+    '127.0.0.1',
+    'localhost',
+    '9b8f-181-32-106-160.ngrok-free.app',  # ✅ Dominio de ngrok
+]
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://9b8f-181-32-106-160.ngrok-free.app'  # ✅ Correcto (sin barra al final)
+]
 
 # Application definition
 
@@ -165,3 +173,13 @@ SESSION_SAVE_EVERY_REQUEST = True  # Guarda la sesión en cada solicitud
 
 
 LOW_QUANTITY = 3
+
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'jimenezlozadajuanfelipe@gmail.com'  # 🔹 Cambia esto por tu correo de Gmail
+EMAIL_HOST_PASSWORD = 'rxee bcvt drtg saxv'  # 🔹 Usar App Password de Gmail
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

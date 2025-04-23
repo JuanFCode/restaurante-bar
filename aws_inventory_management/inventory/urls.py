@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.urls import path
 from .views import (
     AddItem, Dashboard, DeleteItem, EditItem, Index, OrderHistoryView, PendingOrdersView, 
-    SignUpView, custom_logout, add_to_cart, get_inventory_data, print_order, update_cart, update_payment_method, 
+    SignUpView, custom_logout, add_to_cart, get_inventory_data, print_order, send_excel_report, update_cart, update_payment_method, 
     view_cart, checkout
 )
 from django.contrib.auth import views as auth_views
@@ -46,6 +46,8 @@ urlpatterns = [
 
     path('orders/update-payment/<int:order_id>/', update_payment_method, name='update-payment-method'),
 
+
+    path('orders/send-excel-report/', send_excel_report, name='send-excel-report'),
 
 ]
 
